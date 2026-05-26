@@ -1,5 +1,12 @@
 class ApiConstants {
-  static const String baseUrl = 'http://192.168.10.54:8080/api/v1';
+  static const String baseUrl = 'http://192.168.0.106:8080/api/v1';
+
+  // WebSocket (STOMP) — strip /api/v1 and switch scheme
+  static const String wsUrl = 'ws://192.168.0.106:8080/ws';
+  // STOMP destinations
+  static String chatTopic(String inquiryId) => '/topic/chat/$inquiryId';
+  static const String userQueue = '/user/queue/messages';
+  static String chatSendDest(String inquiryId) => '/app/chat/$inquiryId/send';
 
   // Auth
   static const String sendOtp = '/auth/send-otp';
@@ -49,4 +56,7 @@ class ApiConstants {
 
   // Notifications
   static const String notifications = '/notifications';
+
+  // File upload
+  static const String uploadFile = '/files/upload';
 }

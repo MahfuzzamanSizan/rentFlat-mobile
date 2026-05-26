@@ -26,32 +26,38 @@ class PrimaryButton extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: isLoading || onPressed == null
             ? null
-            : LinearGradient(
-                colors: [
-                  backgroundColor ?? AppColors.primary,
-                  (backgroundColor ?? AppColors.primary).withOpacity(0.85),
-                ],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
+            : (backgroundColor != null
+                ? LinearGradient(
+                    colors: [backgroundColor!, backgroundColor!.withOpacity(0.8)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  )
+                : AppColors.primaryGradient),
         color: isLoading || onPressed == null ? AppColors.divider : null,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: isLoading || onPressed == null
             ? null
             : [
                 BoxShadow(
-                  color: (backgroundColor ?? AppColors.primary).withOpacity(0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
+                  color: (backgroundColor ?? AppColors.primaryLight)
+                      .withOpacity(0.4),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 8),
+                ),
+                BoxShadow(
+                  color: (backgroundColor ?? AppColors.primary).withOpacity(0.2),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
               ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: isLoading ? null : onPressed,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: Center(
             child: isLoading
                 ? const SizedBox(

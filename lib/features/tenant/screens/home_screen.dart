@@ -411,9 +411,28 @@ class _FilterSheet extends ConsumerStatefulWidget {
 class _FilterSheetState extends ConsumerState<_FilterSheet> {
   RangeValues _rentRange = const RangeValues(0, 50000);
   int? _bedrooms;
+  AreaModel? _selectedArea;
+
+  void _showAreaPicker(List<AreaModel> areas) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _AreaSearchSheet(
+        areas: areas,
+        selected: _selectedArea,
+        onSelected: (area) {
+          setState(() => _selectedArea = area);
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final areasAsync = ref.watch(areasProvider);
+
     return DraggableScrollableSheet(
       initialChildSize: 0.72,
       maxChildSize: 0.9,
@@ -433,12 +452,61 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                   onPressed: () => setState(() {
                     _rentRange = const RangeValues(0, 50000);
                     _bedrooms = null;
+                    _selectedArea = null;
                   }),
                   child: const Text('Reset', style: TextStyle(color: AppColors.error)),
                 ),
               ],
             ),
             const SizedBox(height: 16),
+            // Area filter
+            const Text('Location', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+            const SizedBox(height: 10),
+            areasAsync.when(
+              data: (areas) => GestureDetector(
+                onTap: () => _showAreaPicker(areas),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                  decoration: BoxDecoration(
+                    color: _selectedArea != null ? AppColors.primary.withOpacity(0.07) : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _selectedArea != null ? AppColors.primary.withOpacity(0.4) : AppColors.divider,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_rounded,
+                        size: 18,
+                        color: _selectedArea != null ? AppColors.primary : AppColors.textHint,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _selectedArea != null ? _selectedArea!.fullName : 'Any location',
+                          style: TextStyle(
+                            color: _selectedArea != null ? AppColors.textPrimary : AppColors.textHint,
+                            fontSize: 14,
+                            fontWeight: _selectedArea != null ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                      if (_selectedArea != null)
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedArea = null),
+                          child: const Icon(Icons.close_rounded, size: 18, color: AppColors.textHint),
+                        )
+                      else
+                        const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textHint, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 20),
             // Rent range
             Row(
               children: [
@@ -496,6 +564,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
               onPressed: () {
                 ref.read(propertySearchProvider.notifier).search(
                       filter: PropertyFilter(
+                        areaId: _selectedArea?.id,
                         minRent: _rentRange.start,
                         maxRent: _rentRange.end,
                         bedrooms: _bedrooms,
@@ -505,6 +574,94 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                 Navigator.pop(context);
               },
               child: const Text('Apply Filters'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AreaSearchSheet extends StatefulWidget {
+  final List<AreaModel> areas;
+  final AreaModel? selected;
+  final ValueChanged<AreaModel> onSelected;
+
+  const _AreaSearchSheet({required this.areas, required this.selected, required this.onSelected});
+
+  @override
+  State<_AreaSearchSheet> createState() => _AreaSearchSheetState();
+}
+
+class _AreaSearchSheetState extends State<_AreaSearchSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = widget.areas.where((a) {
+      final q = _query.toLowerCase();
+      return a.areaName.toLowerCase().contains(q) ||
+          a.city.toLowerCase().contains(q) ||
+          (a.subArea?.toLowerCase().contains(q) ?? false);
+    }).toList();
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.92,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (_, ctrl) => Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                autofocus: true,
+                onChanged: (v) => setState(() => _query = v),
+                decoration: InputDecoration(
+                  hintText: 'Search area...',
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  filled: true,
+                  fillColor: AppColors.background,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: filtered.isEmpty
+                  ? const Center(child: Text('No areas found', style: TextStyle(color: AppColors.textHint)))
+                  : ListView.builder(
+                      controller: ctrl,
+                      itemCount: filtered.length,
+                      itemBuilder: (_, i) {
+                        final area = filtered[i];
+                        final isSelected = widget.selected?.id == area.id;
+                        return ListTile(
+                          onTap: () => widget.onSelected(area),
+                          leading: Icon(Icons.location_on_rounded,
+                              color: isSelected ? AppColors.primary : AppColors.textHint, size: 20),
+                          title: Text(
+                            area.subArea != null ? '${area.areaName}, ${area.subArea}' : area.areaName,
+                            style: TextStyle(fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500),
+                          ),
+                          subtitle: Text('${area.city}, ${area.district}',
+                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          trailing: isSelected
+                              ? const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20)
+                              : null,
+                        );
+                      },
+                    ),
             ),
           ],
         ),

@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/models/property_model.dart';
 import '../../../core/services/api_service.dart';
@@ -32,8 +34,11 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
   int? _floor;
   bool _isNegotiable = false;
   bool _isLoading = false;
+  bool _uploadingPhoto = false;
   AreaModel? _selectedArea;
   final List<String> _selectedAmenities = [];
+  final List<String> _photoUrls = [];
+  final _imagePicker = ImagePicker();
 
   static const _allAmenities = [
     'AC', 'Gas', 'Lift', 'Parking', 'CCTV', 'Generator', 'Security Guard',
@@ -49,6 +54,30 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
     _sizeCtrl.dispose();
     _addressCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadImages() async {
+    final picked = await _imagePicker.pickMultiImage(imageQuality: 80, limit: 6 - _photoUrls.length);
+    if (picked.isEmpty) return;
+    setState(() => _uploadingPhoto = true);
+    try {
+      for (final xfile in picked) {
+        final formData = FormData.fromMap({
+          'file': await MultipartFile.fromFile(xfile.path, filename: xfile.name),
+        });
+        final response = await ApiService.instance.postFormData(ApiConstants.uploadFile, formData);
+        final url = response.data['url'] as String?;
+        if (url != null) setState(() => _photoUrls.add(url));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Photo upload failed: ${e.toString()}'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
   }
 
   Future<void> _submit() async {
@@ -75,6 +104,7 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
         'sizeSqft': _sizeCtrl.text.isNotEmpty ? double.tryParse(_sizeCtrl.text) : null,
         'amenities': _selectedAmenities,
         'houseRules': _rulesCtrl.text.trim().isNotEmpty ? _rulesCtrl.text.trim() : null,
+        if (_photoUrls.isNotEmpty) 'photoUrls': _photoUrls,
       };
 
       if (widget.propertyId != null) {
@@ -281,6 +311,90 @@ class _AddPropertyScreenState extends ConsumerState<AddPropertyScreen> {
                     checkmarkColor: AppColors.primary,
                   );
                 }).toList(),
+              ),
+              const SizedBox(height: 20),
+
+              _SectionLabel('Photos (up to 6)'),
+              if (_photoUrls.isNotEmpty)
+                SizedBox(
+                  height: 100,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _photoUrls.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (_, i) => Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            _photoUrls[i],
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 100,
+                              height: 100,
+                              color: AppColors.background,
+                              child: const Icon(Icons.broken_image_rounded, color: AppColors.textHint),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _photoUrls.removeAt(i)),
+                            child: Container(
+                              width: 22,
+                              height: 22,
+                              decoration: const BoxDecoration(
+                                color: AppColors.error,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close_rounded, color: Colors.white, size: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: (_photoUrls.length >= 6 || _uploadingPhoto) ? null : _pickAndUploadImages,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: (_photoUrls.length >= 6) ? AppColors.background : AppColors.primary.withOpacity(0.07),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: (_photoUrls.length >= 6) ? AppColors.divider : AppColors.primary.withOpacity(0.4),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: _uploadingPhoto
+                      ? const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)))
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_photo_alternate_rounded,
+                              color: _photoUrls.length >= 6 ? AppColors.textHint : AppColors.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _photoUrls.length >= 6 ? 'Maximum 6 photos' : 'Add Photos (${_photoUrls.length}/6)',
+                              style: TextStyle(
+                                color: _photoUrls.length >= 6 ? AppColors.textHint : AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
               ),
               const SizedBox(height: 20),
 

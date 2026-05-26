@@ -19,6 +19,7 @@ dependencies:
 
   # HTTP & Network
   dio: ^5.4.1
+  stomp_dart_client: ^3.0.1
 
   # Local Storage
   flutter_secure_storage: ^9.0.0

@@ -61,16 +61,17 @@ class ChatMessageModel extends Equatable {
   });
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) => ChatMessageModel(
-        id: json['id'],
-        threadId: json['threadId'],
-        senderId: json['senderId'],
-        content: json['content'],
-        type: MessageType.values.firstWhere(
-          (e) => e.name.toUpperCase() == json['type'],
-          orElse: () => MessageType.text,
-        ),
-        createdAt: DateTime.parse(json['createdAt']),
-        isRead: json['isRead'] ?? false,
+        id: json['id'].toString(),
+        threadId: (json['inquiryId'] ?? json['threadId'] ?? '').toString(),
+        senderId: json['senderId'].toString(),
+        content: json['content'] ?? '',
+        type: MessageType.text,
+        createdAt: json['sentAt'] != null
+            ? DateTime.parse(json['sentAt'])
+            : json['createdAt'] != null
+                ? DateTime.parse(json['createdAt'])
+                : DateTime.now(),
+        isRead: json['read'] ?? json['isRead'] ?? false,
       );
 
   @override
