@@ -9,7 +9,8 @@ import '../../../shared/widgets/custom_button.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String phone;
-  const OtpScreen({super.key, required this.phone});
+  final String? devOtp;
+  const OtpScreen({super.key, required this.phone, this.devOtp});
 
   @override
   ConsumerState<OtpScreen> createState() => _OtpScreenState();
@@ -28,6 +29,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   void initState() {
     super.initState();
     _startTimer();
+    if (widget.devOtp != null) {
+      _otp = widget.devOtp!;
+      _otpController.text = widget.devOtp!;
+    }
   }
 
   void _startTimer() {
@@ -92,9 +97,13 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   Future<void> _resend() async {
     try {
-      await ref.read(authProvider.notifier).sendOtp(widget.phone);
+      final newDevOtp = await ref.read(authProvider.notifier).sendOtp(widget.phone);
       _startTimer();
       if (mounted) {
+        if (newDevOtp != null) {
+          _otp = newDevOtp;
+          _otpController.text = newDevOtp;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('OTP resent successfully')),
         );
@@ -148,6 +157,31 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   ],
                 ),
               ),
+              if (widget.devOtp != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: Colors.amber.shade800),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Dev OTP: ${widget.devOtp}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 32),
 
               // OTP Field

@@ -79,7 +79,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/auth/phone', builder: (_, __) => const PhoneScreen()),
       GoRoute(
         path: '/auth/otp',
-        builder: (_, state) => OtpScreen(phone: state.extra as String),
+        builder: (_, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return OtpScreen(
+            phone: extra['phone'] as String,
+            devOtp: extra['devOtp'] as String?,
+          );
+        },
       ),
       GoRoute(path: '/auth/role', builder: (_, __) => const RoleSelectionScreen()),
       GoRoute(

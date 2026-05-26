@@ -46,8 +46,10 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> with SingleTickerProv
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      await ref.read(authProvider.notifier).sendOtp(_formattedPhone);
-      if (mounted) context.push('/auth/otp', extra: _formattedPhone);
+      final devOtp = await ref.read(authProvider.notifier).sendOtp(_formattedPhone);
+      if (mounted) {
+        context.push('/auth/otp', extra: {'phone': _formattedPhone, 'devOtp': devOtp});
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

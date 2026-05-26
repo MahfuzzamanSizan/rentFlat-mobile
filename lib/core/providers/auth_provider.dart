@@ -57,9 +57,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> sendOtp(String phone) async {
+  Future<String?> sendOtp(String phone) async {
     try {
-      await _api.post(ApiConstants.sendOtp, data: {'phone': phone});
+      final response = await _api.post(ApiConstants.sendOtp, data: {'phone': phone});
+      final data = response.data as Map<String, dynamic>?;
+      return data?['devOtp'] as String?;
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
