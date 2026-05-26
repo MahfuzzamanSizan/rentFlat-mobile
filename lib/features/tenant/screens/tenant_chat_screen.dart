@@ -21,7 +21,8 @@ class TenantChatScreen extends ConsumerStatefulWidget {
   ConsumerState<TenantChatScreen> createState() => _TenantChatScreenState();
 }
 
-class _TenantChatScreenState extends ConsumerState<TenantChatScreen> {
+class _TenantChatScreenState extends ConsumerState<TenantChatScreen>
+    with WidgetsBindingObserver {
   final _msgController = TextEditingController();
   final _scrollController = ScrollController();
   final List<ChatMessageModel> _messages = [];
@@ -37,12 +38,22 @@ class _TenantChatScreenState extends ConsumerState<TenantChatScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadMessages();
     _connectWebSocket();
   }
 
   @override
+  void didChangeMetrics() {
+    // Auto-scroll to bottom whenever the keyboard opens
+    final bottomInset = WidgetsBinding
+        .instance.platformDispatcher.views.first.viewInsets.bottom;
+    if (bottomInset > 0) _scrollToBottom();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _stompClient?.deactivate();
     _pollTimer?.cancel();
     _msgController.dispose();
@@ -209,6 +220,7 @@ class _TenantChatScreenState extends ConsumerState<TenantChatScreen> {
     final otherName = widget.extra?['otherUserName'] ?? 'Owner';
 
     return Scaffold(
+      resizeToAvoidBottomInset: false, // we handle keyboard offset manually
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,12 +290,16 @@ class _TenantChatScreenState extends ConsumerState<TenantChatScreen> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   Widget _buildInputBar() {
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final safeBottom = MediaQuery.of(context).padding.bottom;
     return Container(
       padding: EdgeInsets.only(
         left: 12,
         right: 12,
         top: 8,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+        // When keyboard open: lift by keyboard height.
+        // When keyboard closed: respect safe-area (home indicator etc.).
+        bottom: keyboardHeight > 0 ? keyboardHeight + 8 : safeBottom + 8,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
