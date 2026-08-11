@@ -1,8 +1,8 @@
 class ApiConstants {
-  static const String baseUrl = 'http://192.168.0.106:8080/api/v1';
+  static const String baseUrl = 'https://rent-a-flat-6qz5.onrender.com/api/v1';
 
   // WebSocket (STOMP) — strip /api/v1 and switch scheme
-  static const String wsUrl = 'ws://192.168.0.106:8080/ws';
+  static const String wsUrl = 'ws://rent-a-flat-6qz5.onrender.com/ws';
   // STOMP destinations
   static String chatTopic(String inquiryId) => '/topic/chat/$inquiryId';
   static const String userQueue = '/user/queue/messages';
